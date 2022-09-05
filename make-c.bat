@@ -1,1 +1,1 @@
-cosmos.exe -l space
+cosmos.exe -l test

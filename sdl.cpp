@@ -1,4 +1,3 @@
-//#include <windows.h>
 //#include <SWI-Prolog.h>
 #include <SWI-cpp.h>
 #include <stdio.h>
@@ -10,9 +9,9 @@ SDL_Surface* gSurface = NULL;
 SDL_Renderer* gRenderer = NULL;
 SDL_Texture* gTexture = NULL;
 
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
-const int START_TIME = 0;
+int SCREEN_WIDTH = 640;
+int SCREEN_HEIGHT = 480;
+int START_TIME = 0;
 
 struct pair
 {
@@ -23,60 +22,7 @@ typedef struct pair pair;
 
 pair* gpair=NULL;
 
-bool init()
-{
-	//Initialization flag
-	bool success = true;
-
-	//Initialize SDL
-	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-	{
-		printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
-		success = false;
-	}
-	else
-	{
-		//Set texture filtering to linear
-		if( !SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" ) )
-		{
-			printf( "Warning: Linear texture filtering not enabled!" );
-		}
-
-		//Create window
-		gWindow = SDL_CreateWindow( "Main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
-		if( gWindow == NULL )
-		{
-			printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-			success = false;
-		}
-		else
-		{
-			//
-			gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED| SDL_RENDERER_PRESENTVSYNC );
-			if( gRenderer == NULL )
-			{
-				printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
-				success = false;
-			}
-			else
-			{
-				//Initialize renderer color
-				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
-				//Clear screen
-				SDL_RenderClear( gRenderer );
-				//Initialize PNG loading
-				int imgFlags = IMG_INIT_PNG;
-				if( !( IMG_Init( imgFlags ) & imgFlags ) )
-				{
-					printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
-					success = false;
-				}
-			}
-		}
-	}
-
-	return success;
-}
+#include "setup.cpp"
 
 PREDICATE (exit,0){
 	SDL_DestroyWindow( gWindow );
@@ -87,85 +33,6 @@ PREDICATE (exit,0){
 	return true;
 	//PL_succeed;
 }
-//static foreign_t pl_exit(){c_exit();PL_succeed;}
-PREDICATE (sdl_start,2) {
-	SDL_Event e;
-	int count=0;
-	bool quit=false;
-	term_t a0=PL_new_term_ref(),a1=PL_new_term_ref(),a2=PL_new_term_ref(),prev=a1;
-	term_t goal = PL_new_term_ref();
-	term_t exception=PL_new_term_ref();
-	PL_put_atom_chars(exception,"error: update function failure");
-	int start=SDL_GetTicks();
-	int dt=start,t0=dt,t1;
-	int timer=50;
-	int total=0;
-	module_t m = PL_new_module(PL_new_atom("user"));
-	!PL_get_integer(A1, &timer);
-	a1=A2;/*
-	//PL_unify(a1,A2);
-	PlTermv av(2);
-	av[0]=A2;
-	PlTerm a_;*/
-	//av[1]=PlTermv(a2);
-	while( !quit )
-	{
-		//Handle events on queue
-		while( SDL_PollEvent( &e ) != 0 )
-		{
-			//printf("%d,%d\n",e,&e);
-			//User requests quit
-			if( e.type == SDL_QUIT )
-			{
-				quit = true;
-			}
-			else if( e.type == SDL_KEYDOWN )
-            {
-				int key=e.key.keysym.sym ;
-				char c=key;
-				//printf("key;%d;%c\n",key,c);
-				if(PL_put_integer(a0, key)&&PL_cons_functor(goal, PL_new_functor(PL_new_atom("keyDown"), 1), a0)&&PL_call(goal,m))
-					0;
-			}
-			else if( e.type == SDL_MOUSEBUTTONUP )
-            {
-				int key=e.key.keysym.sym;
-				char c=key;
-				//printf("key;%d;%c\n",key,c);
-				if(PL_put_integer(a0, key)&&PL_cons_functor(goal, PL_new_functor(PL_new_atom("mouseUp"), 1), a0)&&PL_call(goal,m))
-					0;
-			}
-		}
-		t1=SDL_GetTicks();
-		dt=t1-t0; t0=t1;
-		total+=dt;
-		if(total>timer) {
-			printf("update;%d,%d\n",timer,total);
-			total=0;
-			/*
-			PlCall("update",av);
-			av[0]=av[1];
-			//av[1]=a_;//PL_new_term_ref();
-			PlQuery q("update", av);*/
-			//q.next_solution();
-			if(!(PL_cons_functor(goal, PL_new_functor(PL_new_atom("update"), 2), a1,a2)&&PL_call(goal,m))) {
-				printf("error: 'update' predicate not found\n");
-				PL_raise_exception(exception);
-				PL_fail;
-			}
-			count++;
-			a1=a2;
-			a2=PL_new_term_ref();
-			//break;
-		}
-		//if(count>5000)quit=true;
-		SDL_Delay(1);
-	}/*
-	q.next_solution();*/
-	//SDL_Delay(1);
-	//PL_cons_functor(goal, PL_new_functor(PL_new_atom("update"), 3), a0,a0,a0)&&PL_call(goal,NULL)||printf("error\n");
-	PL_succeed;
-} 
 /*
 
 static foreign_t eventIterator(term_t to){
@@ -187,29 +54,155 @@ static foreign_t eventIterator(term_t to){
 	PL_succeed;
 }
 */
+module_t m = PL_new_module(PL_new_atom("user"));
+term_t goal=PL_new_term_ref();
+term_t exception=PL_new_term_ref();
+
+void write(term_t a) {
+	!(PL_cons_functor(goal, PL_new_functor(PL_new_atom("writeln"), 1), a));	PL_call(goal,m);
+}
+void update(term_t a1,term_t a2) {
+	!PL_put_term(a1, a2);
+	!PL_put_variable(a2);
+}
+bool events(term_t &a1,term_t &a2) {
+	SDL_Event e;
+	term_t a0=PL_new_term_ref(),arg2=PL_new_term_ref();
+	bool quit=false;
+	term_t a=PL_new_term_ref();
+	PL_put_atom_chars(exception,"error: event could not be called");
+	//Handle events on queue
+	while( SDL_PollEvent( &e ) != 0 )
+	{
+		//printf("%d,%d\n",e,&e);
+		if( e.type == SDL_QUIT )
+		{
+			quit = true;
+		}
+		else if( e.type == SDL_KEYDOWN )
+		{
+			int key=e.key.keysym.sym;
+			const char* s=SDL_GetKeyName(key);
+			if(PL_put_string_chars(a0, s)&&PL_cons_functor(goal, PL_new_functor(PL_new_atom("keyDown"), 3), a0,a1,a2)&&PL_call(goal,m))
+				0;
+			update(a1,a2);
+		}
+		else if( e.type == SDL_MOUSEBUTTONUP )
+		{
+			int x, y;
+			SDL_GetMouseState( &x, &y );
+			if(PL_put_integer(a0, x)&&PL_put_integer(arg2, y)&&PL_cons_functor(goal, PL_new_functor(PL_new_atom("mouseUp"), 4), a0,arg2,a1,a2)){
+				//printf("e:\n");	!(PL_cons_functor(a, PL_new_functor(PL_new_atom("writeln"), 1), goal));	PL_call(a,m);
+				if(!PL_call(goal,m)){
+					//PL_raise_exception(exception);
+					write(exception);
+					!(PL_cons_functor(a, PL_new_functor(PL_new_atom("halt"), 0), goal)); PL_call(a,m);
+				}
+			}
+			else {
+				throw(1);
+			}/*
+			printf("e:\n");
+			write(a1);
+			write(a2);*/
+			update(a1,a2);
+		}
+	}
+	return quit;
+}
+PREDICATE (startDt,1) {
+	SDL_Event e;
+	int start=SDL_GetTicks();
+	int dt=start,t0=dt,t1;
+	term_t a0=PL_new_term_ref(),a1=A1,a2=PL_new_term_ref();
+	bool quit=false;
+	while( !quit )
+	{
+		//process events
+		quit=events(a1,a2);	
+		//loop
+		t1=SDL_GetTicks();
+		dt=t1-t0; t0=t1;
+		!PL_put_integer(a0,dt);
+		if(!(PL_cons_functor(goal, PL_new_functor(PL_new_atom("update"), 3), a0,a1,a2)&&PL_call(goal,m))) {
+			printf("error: 'update' predicate failure\n");
+			term_t exception=PL_new_term_ref();
+			PL_put_atom_chars(exception,"error: update function failure");
+			PL_raise_exception(exception);
+			PL_fail;
+		}
+		!PL_put_term(a1, a2);
+		!PL_put_variable(a2);
+		SDL_Delay(1);
+	}
+	PL_succeed;
+}
+PREDICATE (sdl_start,2) {
+	SDL_Event e;
+	int count=0;
+	bool quit=false;
+	term_t a1=A2,a2=PL_new_term_ref(),prev=a1;
+	term_t exception=PL_new_term_ref();
+	PL_put_atom_chars(exception,"error: update function failure");
+	int start=SDL_GetTicks();
+	int dt=start,t0=dt,t1;
+	int timer=50;
+	int total=0;
+	module_t m = PL_new_module(PL_new_atom("user"));
+	!PL_get_integer(A1, &timer);
+	while( !quit )
+	{
+		//process events
+		quit=events(a1,a2);	
+		//loop
+		t1=SDL_GetTicks();
+		dt=t1-t0; t0=t1;
+		total+=dt;
+		if(total>timer) {
+			//printf("update;%d,%d\n",timer,total);
+			total-=timer;
+			if(!(PL_cons_functor(goal, PL_new_functor(PL_new_atom("update"), 2), a1,a2)&&PL_call(goal,m))) {
+				printf("error: 'update' predicate failure\n");
+				PL_raise_exception(exception);
+				PL_fail;
+			}
+			update(a1,a2);
+			//quit=true;//break;
+		}
+		SDL_Delay(1);
+	}
+	PL_succeed;
+}
+PREDICATE (init,2) {
+	SCREEN_WIDTH=(int)A1;
+	SCREEN_HEIGHT=(int)A2;
+	return init();
+	PL_succeed;
+}
 PREDICATE (init,0) {
-	init();
+	return init();
 	PL_succeed;
 }
 PREDICATE (loadImage,2) {
 	char *s;
 	PL_get_chars(A1,&s,CVT_STRING)||printf("error\n");
 	SDL_Surface* loadedSurface = IMG_Load( s );
-	SDL_Texture* newTexture = SDL_CreateTextureFromSurface( gRenderer, loadedSurface );
-	if( newTexture == NULL )
-		printf( "Unable to create texture from %s! SDL Error: %s\n", s, SDL_GetError() );
-	SDL_FreeSurface( loadedSurface );
 	if( loadedSurface == NULL )	{
 		printf( "Unable to load image %s! SDL Error: %s\n", s, SDL_GetError() );
 		PL_fail;
 	}
+	SDL_Texture* newTexture = SDL_CreateTextureFromSurface( gRenderer, loadedSurface );
+	if( newTexture == NULL ) {
+		printf( "Unable to create texture from %s! SDL Error: %s\n", s, SDL_GetError() );
+		PL_fail;
+	}
+	//SDL_FreeSurface( loadedSurface );
 	pair *p1=new pair;
 	gpair=p1;
 	p1->s=loadedSurface;
 	p1->t=newTexture;
 	void *p=p1;
-	printf("p;%d;\n",p);
-	printf("l;%d;%d\n",loadedSurface,newTexture);
+	//printf("p;%d;\n",p);printf("l;%d;%d;%d\n",loadedSurface,newTexture,loadedSurface->w);
 	term_t a=PL_new_term_ref();
 	PL_put_pointer(a, p);
 	return PL_unify(A2, a);
@@ -218,26 +211,22 @@ PREDICATE (drawImage,3) {
 	void *p;
 	pair *p1;
 	int i,x,y;
-	SDL_Surface* s;
-	SDL_Texture* t;
 	!PL_get_pointer(A1,&p);
+	!PL_get_integer(A2,&x);
+	!PL_get_integer(A3,&y);
 	p1=(pair*)p;
-	s=p1->s;
-	t=p1->t;
-	printf("p;%d;\n",p);
-	printf("d;%d;%d;\n",s,t);/**/
-	!PL_get_integer(A2,&x)&&PL_get_integer(A3,&y);
+	SDL_Surface* s=p1->s;
+	SDL_Texture* t=p1->t;
 	//
+	//printf("p;%d;\n",p);printf("d;%d;%d;(%d;%d;%d;%d;)\n",s,t,s->w,s->h,x,y);/**/
 	SDL_Rect renderQuad = { x, y, s->w, s->h };
 	SDL_RenderCopy( gRenderer, t, NULL, &renderQuad );
 	PL_succeed;
 }
 PREDICATE (clear,0) {
-	//SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
 	SDL_RenderClear( gRenderer );PL_succeed;
 }
 PREDICATE (refresh,0) {
-	//SDL_UpdateWindowSurface( gWindow );
 	SDL_RenderPresent( gRenderer );PL_succeed;
 }
 
@@ -250,11 +239,23 @@ PREDICATE (rect,4) {
 	//Sdprintf(b);
 	return b;
 }
-PREDICATE (circle,4) {
+PREDICATE (rectBorder,4) {
 	int i,i2,i3,i4;
 	int b=PL_get_integer(A1,&i)&&PL_get_integer(A2,&i2)&&PL_get_integer(A3,&i3)&&PL_get_integer(A4,&i4);
-	SDL_Rect fillRect = { i, i2, i3, i4 };
-	SDL_RenderFillRect( gRenderer, &fillRect );
+	SDL_Rect rect = { i, i2, i3, i4 };
+	SDL_RenderDrawRect( gRenderer, &rect );
+	return b;
+}
+PREDICATE (circle,3) {
+	int i,i2,i3,i4;
+	int b=PL_get_integer(A1,&i)&&PL_get_integer(A2,&i2)&&PL_get_integer(A3,&i3);//&&PL_get_integer(A4,&i4);
+	SDL_RenderFillCircle(gRenderer, i, i2, i3);
+	return b;
+}
+PREDICATE (circleBorder,3) {
+	int i,i2,i3,i4;
+	int b=PL_get_integer(A1,&i)&&PL_get_integer(A2,&i2)&&PL_get_integer(A3,&i3);//&&PL_get_integer(A4,&i4);
+	SDL_RenderDrawCircle(gRenderer, i, i2, i3);
 	return b;
 }
 PREDICATE (setRGBA,4) {
@@ -264,27 +265,9 @@ PREDICATE (setRGBA,4) {
 	SDL_SetRenderDrawColor( gRenderer, i,i2,i3, i4 );
 	return b;
 }
-/*
-static foreign_t pl_circle(term_t a){
-	//circle(screen,a0,a1,a2,a3);SDL_SetColorKey( loadedSurface, SDL_TRUE, SDL_MapRGB( loadedSurface->format, 0, 0xFF, 0xFF ) );
-	//circlefill(screen,&a0,&a1,&a2,&a3);
-	//SDL_Rect fillRect = { a0, a1,a2,a3 };
-	int i,i2,i3,i4;
-	//int b=PL_get_integer(a,&i)&&PL_get_integer(a2,&i2)&&PL_get_integer(a3,&i3)&&PL_get_integer(a4,&i4);
-	SDL_Rect fillRect = { i, i2, i3, i4 };
-	//SDL_SetRenderDrawColor( gRenderer, 0xFF, 0x00, 0x00, 0xFF );		
-	SDL_RenderFillRect( gRenderer, &fillRect );
-	PL_succeed;
-}
-
-*/
-
-#define seti(i,a) do { int b=PL_get_integer(a,&i); } while (0)
 
 PREDICATE (sdl_delay,1) {
-	int i;
-	seti(i,A1);
-	SDL_Delay(i);
+	SDL_Delay(int(A1));
 	PL_succeed;
 }
 PREDICATE (getTicks,1) {

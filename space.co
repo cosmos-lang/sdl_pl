@@ -1,3 +1,6 @@
+pl::ensure_loaded('sdl.pl')
+pl::ensure_loaded('callbacks.pl')
+
 sp={
 	rel putpixel(a0,a1,a2,a3)
 		pl::putpixel(a0,a1,a2,a3)
@@ -6,7 +9,7 @@ sp={
 	rel loadImage(a0,a1)
 		pl::loadImage(a0,a1)
 	rel drawImage(a0,a1,a2)
-		pl::drawImage(a0,a1,a2)
+		pl::drawImage(a0,int(a1),int(a2))
 	rel rect(a0,a1,a2,a3)
 		pl::rect(int(a0),int(a1),int(a2),int(a3))
 	rel setRGBA(a0,a1,a2,a3)
@@ -21,26 +24,16 @@ sp={
 		pl::fastline(a0,a1,a2,a3)
 	rel triangle(a0,a1,a2,a3)
 		pl::triangle(a0,a1,a2,a3)
-	rel polygon(a0,a1,a2,a3)
-		pl::polygon(a0,a1,a2,a3)
 	rel rectfill(a0,a1,a2,a3)
 		pl::rectfill(a0,a1,a2,a3)
-	rel circle(a0,a1,a2,a3)
-		pl::circle(a0,a1,a2,a3)
 	rel circlefill()
-		pl::circlefill(a0,a1,a2,a3)
-	rel do_ellipse(a0,a1,a2,a3)
-		pl::do_ellipse(a0,a1,a2,a3)
-	rel ellipse(a0,a1,a2,a3)
-		pl::ellipse(a0,a1,a2,a3)
-	rel ellipsefill(a0,a1,a2,a3)
-		pl::ellipsefill(a0,a1,a2,a3)
-	rel do_arc(a0,a1,a2,a3)
-		pl::do_arc(a0,a1,a2,a3)
+		pl::circlefill(a0,a1,a2,a
 	rel arc(a0,a1,a2,a3)
 		pl::arc(a0,a1,a2,a3)*/
-	rel init()
-		pl::init()
+	rel circle(a0,a1,a2,a3)
+		pl::circle(a0,a1,a2,a3)
+	rel init(a,b)
+		pl::init(int(a),int(b))
 	rel readkey()
 		pl::readkey()
 	rel clear()
@@ -50,96 +43,9 @@ sp={
 	rel start(a,a2,a3)
 		pl::start(a,a2,a3)
 	rel delay(a0)
-		pl::sdl_delay(a0)
-	rel test(a)
-		a=2
+		pl::sdl_delay(int(a0))
+	rel test(a0)
+		a0=2
+	true
 }
-print(sp)
-pl::ensure_loaded('sdl.pl')
-pl::ensure_loaded('callbacks.pl')
-/*
-sp.init()
-//pl::set_window()
-//sp.circlefill()
-//sp.readkey()
-sp.start(50,{
-	rel update(x,y)
-		y=x+1
-		print(y)
-},10)
-sp.start(50,{
-	rel update(x,y)
-		y=x+1
-		//clear
-		clear()
-		//draw
-		sp.setRGB(0,0,0)
-		sp.rect(x,0,50,50)
-		sp.test(a)
-		//end loop
-		sp.refresh()
-		print(sp)
-		print(y)
-},10)*/
-require('mutable',mutable)
-require('table',table)
-
-Var = {
-	rel new(val,o)
-		pl::gensym('var',x)
-		table.concat(Var,{name=x},o)
-		//pl::atom_string(o,s)
-		c::nb_setval(x,val)
-
-	rel set(o,y)
-		c::nb_setval(o.name,y)
-	
-	rel get(o,y)
-		c::nb_getval(o.name,y)
-	
-}
-pos=Var.new([1,2])
-dir=Var.new('right')
-img=sp.loadImage('b1.png')
-/*
-x=Var.new(2)
-print(x)
-print(Var.get(x))
-Var.set(x,1)
-print(Var.get(x))
-*/
-functor(state,Functor)
-
-sp.init()
-print(img)
-//sp.setRGB(0,0,0) and sp.drawImage(img,0,100) and sp.rect(0,0,50,50)
-rel clear()
-	sp.setRGBA(255,255,255,255) and sp.clear()
-//sp.refresh() and sp.delay(1000)
-
-sp.start(50,{
-	
-	rel mouseup(x,y)
-		print(x,y)
-	rel keypressed(key)
-		print(key)
-	rel update(o,o2)
-		print(o)
-		y=o.x+1
-		//clear
-		clear()
-		//draw
-		sp.drawImage(img,0,100)
-		sp.setRGB(0,0,0)
-		sp.rect(o.x,0,50,50)
-		sp.test(a)
-		//end loop
-		sp.refresh()
-		print(sp)
-		print(y)
-		o2={x=y}
-		true
-},{x=10})/*
-mutable.set('x',1)
-print(mutable.get('x'))*/
-//pl::exit()
+export(sp)
